@@ -1,0 +1,164 @@
+---
+import { render } from 'astro:content';
+import ActivityBadge from '../../components/ActivityBadge.astro';
+import Avatar from '../../components/Avatar.astro';
+import CreatorCard from '../../components/CreatorCard.astro';
+import DomainChip from '../../components/DomainChip.astro';
+import VideoCard from '../../components/VideoCard.astro';
+import Base from '../../layouts/Base.astro';
+import { allVideos, getData, withBase, type Domain } from '../../lib/data';
+import { formatCount, formatDuration, formatRhythm, LEVELS } from '../../lib/format';
+
+export async function getStaticPaths() {
+  const { domains } = await getData();
+  return domains.map((domain) => ({ params: { slug: domain.id }, props: { domain } }));
+}
+
+interface Props {
+  domain: Domain;
+}
+
+const { domain } = Astro.props;
+const { domains } = await getData();
+const { Content } = await render(domain);
+const latest = allVideos(domain.creators).slice(0, 8);
+const others = domains.filter((d) => d.id !== domain.id);
+---
+
+<Base title={domain.data.title} description={`${domain.data.title} : ${domain.data.tagline} Les meilleurs vulgarisateurs francophones du domaine, comparés.`} current="domaines">
+  <div class="domain-hero" style={`--h:${domain.data.hue}`}>
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Fil d'Ariane">
+        <a href={withBase('/')}>Accueil</a>
+        <span aria-hidden="true">/</span>
+        <a href={withBase('/domaines/')}>Domaines</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{domain.data.title}</span>
+      </nav>
+      <span class="domain-emoji" aria-hidden="true">{domain.data.emoji}</span>
+      <h1>{domain.data.title}</h1>
+      <p class="lead">{domain.data.tagline}</p>
+      <div class="prose domain-intro"><Content /></div>
+    </div>
+  </div>
+
+  <section class="section" aria-labelledby="compare-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">En un coup d'œil</span>
+          <h2 id="compare-title">Qui regarder&nbsp;? Le comparatif</h2>
+          <p>Style, niveau, durée typique et rythme : de quoi choisir selon votre temps et vos envies.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="compare">
+          <caption class="visually-hidden">Comparatif des vulgarisateurs du domaine {domain.data.title}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Vulgarisateur</th>
+              <th scope="col">En une phrase</th>
+              <th scope="col">Niveau</th>
+              <th scope="col">Durée typique</th>
+              <th scope="col">Rythme récent</th>
+              <th scope="col">Activité</th>
+              <th scope="col">Abonnés</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              domain.creators.map((c) => (
+                <tr>
+                  <th scope="row">
+                    <span class="who">
+                      <Avatar creator={c} size={32} />
+                      <a href={c.url}>{c.data.name}</a>
+                    </span>
+                  </th>
+                  <td>{c.data.tagline}</td>
+                  <td>{LEVELS[c.data.level].short}</td>
+                  <td class="num">{formatDuration(c.stats.medianSeconds)}</td>
+                  <td>{c.stats.lastDate ? formatRhythm(c.stats.perMonth) : '–'}</td>
+                  <td>
+                    <ActivityBadge activity={c.stats.activity} lastDate={c.stats.lastDate} />
+                  </td>
+                  <td class="num">{formatCount(c.channel?.subscribers)}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="creators-title">
+    <div class="container">
+      <div class="section-head">
+        <h2 id="creators-title">Les {domain.creators.length} vulgarisateurs</h2>
+      </div>
+      <div class="grid">
+        {domain.creators.map((c) => <CreatorCard creator={c} hideDomain={c.domain.id === domain.id} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="latest-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2 id="latest-title">Dernières vidéos du domaine</h2>
+        </div>
+        <a class="btn btn-small" href={withBase(`/videos/?domaine=${domain.id}`)}>Toutes les vidéos du domaine →</a>
+      </div>
+      <div class="grid">
+        {latest.map((v) => <VideoCard video={v} creator={v.creator.data.name} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="others-title">
+    <div class="container">
+      <h2 id="others-title" class="h3">Explorer un autre domaine</h2>
+      <div class="chips">{others.map((d) => <DomainChip domain={d} full large />)}</div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .domain-hero {
+    padding-block: 28px 44px;
+    background:
+      radial-gradient(80% 140% at 100% 0%, var(--dom-bg) 0%, transparent 65%),
+      var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.88rem;
+    color: var(--ink-2);
+    margin-bottom: 24px;
+  }
+
+  .breadcrumb a {
+    color: var(--ink-2);
+  }
+
+  .domain-emoji {
+    display: block;
+    font-size: 3rem;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .domain-intro {
+    margin-top: 20px;
+  }
+
+  .h3 {
+    font-size: 1.3rem;
+  }
+</style>

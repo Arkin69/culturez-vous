@@ -1,0 +1,50 @@
+---
+import VideoBrowser from '../components/VideoBrowser.astro';
+import Base from '../layouts/Base.astro';
+import { allVideos, dataFreshness, getData, withBase } from '../lib/data';
+import { formatNumber } from '../lib/format';
+import { yearsOf } from '../lib/filter';
+
+const { creators, domains } = await getData();
+const videos = allVideos(creators);
+const freshness = dataFreshness(creators);
+---
+
+<Base title="Toutes les vidéos" description={`${formatNumber(videos.length)} vidéos de vulgarisation francophone, à rechercher par sujet, domaine, durée ou vulgarisateur.`} current="videos">
+  <section class="section">
+    <div class="container">
+      <span class="eyebrow">Le catalogue</span>
+      <h1>Toutes les vidéos</h1>
+      <p class="lead">
+        {formatNumber(videos.length)} vidéos de {creators.length} vulgarisateurs, à fouiller par sujet, domaine, durée ou
+        année. Les Shorts ne sont pas inclus.
+      </p>
+      {
+        freshness.complete < freshness.total && (
+          <div class="notice">
+            <span aria-hidden="true">ℹ️</span>
+            <p>
+              {freshness.complete === 0
+                ? "Pour l'instant, seules les vidéos les plus récentes de chaque chaîne sont listées."
+                : `Pour ${freshness.total - freshness.complete} chaîne${freshness.total - freshness.complete > 1 ? 's' : ''} sur ${freshness.total}, seules les vidéos les plus récentes sont listées pour le moment.`}{' '}
+              Le catalogue complet arrive avec la prochaine mise à jour des données.
+            </p>
+          </div>
+        )
+      }
+    </div>
+  </section>
+  <section class="section">
+    <div class="container">
+      <VideoBrowser
+        id="cat"
+        src={withBase('/catalogue.json')}
+        initial={videos.slice(0, 48)}
+        total={videos.length}
+        years={yearsOf(videos)}
+        creators={creators}
+        domains={domains}
+      />
+    </div>
+  </section>
+</Base>

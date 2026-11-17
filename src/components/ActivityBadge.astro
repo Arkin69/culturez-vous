@@ -1,0 +1,14 @@
+---
+import { ACTIVITY, formatAge, type Activity } from '../lib/format';
+import { NOW } from '../lib/data';
+
+interface Props {
+  activity: Activity;
+  lastDate?: string | null;
+}
+const { activity, lastDate } = Astro.props;
+const info = ACTIVITY[activity];
+const title = lastDate ? `Dernière vidéo ${formatAge(lastDate, NOW)}` : info.hint;
+---
+
+<span class:list={['badge', `badge-${activity}`]} title={title}>{info.label}</span>

@@ -1,0 +1,82 @@
+# Met à jour les données YouTube chaque semaine, puis construit et publie le site sur GitHub Pages.
+# Un seul workflow : un commit poussé avec GITHUB_TOKEN ne déclenche pas d'autre workflow.
+name: Mise à jour et déploiement
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 4 * * 1' # chaque lundi à 4 h 17 UTC
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Relire tout le catalogue (sinon mise à jour incrémentale)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Récupérer les données YouTube
+        if: github.event_name != 'push'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          FULL: ${{ inputs.full && '--full' || '' }}
+        run: |
+          if [ -n "$YOUTUBE_API_KEY" ]; then
+            node scripts/fetch-youtube.mjs $FULL
+          else
+            echo "::warning::Secret YOUTUBE_API_KEY absent : mode sans clé, seules les 15 dernières vidéos de chaque chaîne sont récupérées."
+            node scripts/fetch-youtube.mjs --mode rss
+          fi
+
+      - name: Enregistrer les données dans le dépôt
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data src/content/creators
+          if git diff --cached --quiet; then
+            echo "Aucune nouvelle donnée."
+          else
+            git commit -m "Données YouTube : mise à jour du $(date -u +%F)"
+            git pull --rebase
+            git push
+          fi
+
+      - run: npm test
+
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

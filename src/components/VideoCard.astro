@@ -1,0 +1,9 @@
+---
+import { videoCardHtml, type CardOptions } from '../scripts/video-card';
+import type { Video } from '../lib/stats';
+
+type Props = { video: Video } & CardOptions;
+const { video, ...opts } = Astro.props;
+---
+
+<Fragment set:html={videoCardHtml(video, opts)} />

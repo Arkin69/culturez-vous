@@ -1,0 +1,29 @@
+{
+  "name": "culturez-vous",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Annuaire des meilleurs vulgarisateurs YouTube francophones, avec analyses et catalogue complet des vidéos.",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "vitest run",
+    "fetch": "node scripts/fetch-youtube.mjs"
+  },
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "astro": "^7.4.12"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@types/node": "^22.20.5",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0"
+  }
+}

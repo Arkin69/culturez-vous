@@ -1,0 +1,106 @@
+---
+import Base from '../layouts/Base.astro';
+import { dataFreshness, getData } from '../lib/data';
+import { ACTIVITY, formatDate, LEVELS } from '../lib/format';
+
+const { creators, domains } = await getData();
+const freshness = dataFreshness(creators);
+const repo = 'https://github.com/arkin69/culturez-vous';
+---
+
+<Base title="À propos et méthode" description="Comment Culturez-vous sélectionne et analyse les vulgarisateurs francophones, et d'où viennent les données." current="a-propos">
+  <section class="section">
+    <div class="container about">
+      <span class="eyebrow">À propos</span>
+      <h1>Notre méthode</h1>
+      <p class="lead">
+        Culturez-vous veut donner envie de découvrir la vulgarisation francophone : {creators.length} vulgarisateurs,
+        {domains.length} domaines, une analyse rapide de chacun et la liste de leurs vidéos.
+      </p>
+
+      <div class="prose">
+        <h2>Comment sont choisis les vulgarisateurs&nbsp;?</h2>
+        <p>La sélection n'est pas un classement par nombre d'abonnés. Une chaîne y entre quand elle coche la plupart de ces critères :</p>
+        <ul>
+          <li><strong>Rigueur</strong> : des sources, des experts consultés, des erreurs corrigées quand il y en a.</li>
+          <li><strong>Pédagogie</strong> : on comprend vraiment quelque chose en sortant de la vidéo.</li>
+          <li><strong>Originalité</strong> : un ton, un format ou un angle qu'on ne trouve pas ailleurs.</li>
+          <li><strong>Un vrai catalogue</strong> : assez de vidéos pour qu'on ait envie d'y revenir.</li>
+          <li><strong>En français</strong> : des créateurs francophones, de France, du Québec ou d'ailleurs.</li>
+        </ul>
+        <p>
+          Certaines chaînes défendent des points de vue, en économie, en politique ou en écologie. Nous le signalons dans leur
+          fiche : c'est une raison de plus pour croiser les sources.
+        </p>
+
+        <h2>Comment lire une fiche</h2>
+        <ul>
+          <li>
+            <strong>Niveau</strong> : {Object.values(LEVELS).map((l) => `${l.short} (${l.label.toLowerCase()})`).join(', ')}.
+          </li>
+          <li>
+            <strong>Activité</strong> : {Object.values(ACTIVITY).map((a) => `${a.label.toLowerCase()} (${a.hint.toLowerCase()})`).join(' ; ')}.
+          </li>
+          <li><strong>Durée typique</strong> : la durée médiane des vidéos, moins sensible que la moyenne aux longs directs.</li>
+          <li><strong>Rythme récent</strong> : le nombre de vidéos publiées sur les douze derniers mois.</li>
+          <li>
+            <strong>Par où commencer</strong> : une sélection faite à la main quand elle existe, sinon les vidéos les plus vues
+            de la chaîne.
+          </li>
+        </ul>
+
+        <h2>D'où viennent les données&nbsp;?</h2>
+        <p>
+          Les analyses sont rédigées pour ce site. Les informations sur les chaînes et les vidéos (titres, dates, durées, vues,
+          abonnés) proviennent de YouTube et sont mises à jour automatiquement chaque semaine via l'API YouTube Data. Les Shorts
+          et les directs à venir sont exclus.
+        </p>
+        <p>
+          {freshness.updatedAt && `Dernière mise à jour : ${formatDate(freshness.updatedAt)}. `}
+          {
+            freshness.complete === 0
+              ? "Pour l'instant, seules les dernières vidéos de chaque chaîne sont listées, en attendant la prochaine mise à jour."
+              : freshness.complete < freshness.total
+              ? `Catalogue complet disponible pour ${freshness.complete} chaîne${freshness.complete > 1 ? 's' : ''} sur ${freshness.total} ; pour les autres, seules les dernières vidéos sont listées en attendant la prochaine mise à jour.`
+              : 'Le catalogue est complet pour toutes les chaînes.'
+          }
+        </p>
+
+        <h2>Vie privée</h2>
+        <p>
+          Ce site ne dépose aucun cookie et ne contient aucun outil de mesure d'audience. Les miniatures et avatars sont chargés
+          depuis les serveurs de YouTube, et les vidéos s'ouvrent directement sur YouTube : vos vues comptent pour les créateurs.
+        </p>
+
+        <h2>Proposer un vulgarisateur ou signaler une erreur</h2>
+        <p>
+          Une chaîne manque, une analyse vous semble injuste ou datée&nbsp;? Le projet est ouvert :
+          <a href={`${repo}/issues/new`} target="_blank" rel="noopener">ouvrez une demande sur GitHub</a>, ou proposez directement
+          une fiche en suivant le <a href={`${repo}#ajouter-un-vulgarisateur`} target="_blank" rel="noopener">guide du dépôt</a>.
+        </p>
+        <p class="muted">
+          Culturez-vous est un projet indépendant, sans lien avec YouTube ni avec les créateurs présentés. Les noms et images des
+          chaînes appartiennent à leurs auteurs.
+        </p>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .about .prose {
+    margin-top: 32px;
+  }
+
+  .about h2 {
+    margin-top: 1.6em;
+  }
+
+  .about ul {
+    padding-left: 1.2em;
+  }
+
+  .about li {
+    margin-bottom: 0.5em;
+  }
+</style>

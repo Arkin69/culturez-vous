@@ -1,0 +1,361 @@
+---
+import { render } from 'astro:content';
+import ActivityBadge from '../../components/ActivityBadge.astro';
+import Avatar from '../../components/Avatar.astro';
+import CreatorCard from '../../components/CreatorCard.astro';
+import DomainChip from '../../components/DomainChip.astro';
+import VideoBrowser from '../../components/VideoBrowser.astro';
+import VideoCard from '../../components/VideoCard.astro';
+import Base from '../../layouts/Base.astro';
+import { getData, NOW, withBase, type Creator } from '../../lib/data';
+import {
+  formatAge,
+  formatCount,
+  formatDuration,
+  formatMonthYear,
+  formatNumber,
+  formatRhythm,
+  formatTotalHours,
+  LEVELS,
+} from '../../lib/format';
+
+export async function getStaticPaths() {
+  const { creators } = await getData();
+  return creators.map((creator) => ({ params: { slug: creator.id }, props: { creator } }));
+}
+
+interface Props {
+  creator: Creator;
+}
+
+const { creator } = Astro.props;
+const { creators } = await getData();
+const { data, stats, channel, domain } = creator;
+const { Content } = await render(creator.entry);
+
+const similar = data.similar.map((id) => creators.find((c) => c.id === id)!).filter(Boolean);
+const starterIds = new Set(creator.starters.map((v) => v.id));
+const popular = creator.popular.filter((v) => !starterIds.has(v.id)).slice(0, 3);
+const subscribeUrl = `https://www.youtube.com/channel/${data.channelId}?sub_confirmation=1`;
+
+const tiles = [
+  channel?.subscribers ? { value: formatCount(channel.subscribers), label: 'abonnés' } : null,
+  channel?.videoCount
+    ? { value: channel.source === 'api' ? formatNumber(channel.videoCount) : formatCount(channel.videoCount), label: 'vidéos sur YouTube (Shorts compris)' }
+    : null,
+  creator.complete && stats.totalSeconds ? { value: formatTotalHours(stats.totalSeconds), label: 'de vidéos à regarder' } : null,
+  stats.medianSeconds ? { value: formatDuration(stats.medianSeconds), label: 'durée typique d’une vidéo' } : null,
+  stats.lastDate ? { value: formatRhythm(stats.perMonth), label: 'rythme de publication récent' } : null,
+  stats.lastDate ? { value: formatAge(stats.lastDate, NOW), label: 'dernière vidéo' } : null,
+  channel?.publishedAt ? { value: formatMonthYear(channel.publishedAt), label: 'chaîne créée en' } : null,
+].filter((t): t is { value: string; label: string } => Boolean(t));
+---
+
+<Base title={data.name} description={`${data.name} : ${data.tagline} Analyse, par où commencer et toutes ses vidéos.`} image={creator.avatar} current="vulgarisateurs">
+  <div class="creator-hero" style={`--h:${domain.data.hue}`}>
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Fil d'Ariane">
+        <a href={withBase('/')}>Accueil</a>
+        <span aria-hidden="true">/</span>
+        <a href={withBase(`/domaines/${domain.id}/`)}>{domain.data.title}</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{data.name}</span>
+      </nav>
+      <div class="ch-grid">
+        <Avatar creator={creator} size={140} class="ch-avatar" eager />
+        <div class="ch-text">
+          <h1>{data.name}</h1>
+          <p class="ch-author">
+            {data.author && <span>{data.author} · </span>}
+            <a href={creator.channelUrl} target="_blank" rel="noopener">{channel?.handle ?? data.handle}</a>
+          </p>
+          <p class="ch-tagline">{data.tagline}</p>
+          <div class="chips">
+            {creator.domains.map((d) => <DomainChip domain={d} full />)}
+            <span class="badge no-dot" title={LEVELS[data.level].label}>Niveau : {LEVELS[data.level].short}</span>
+            <ActivityBadge activity={stats.activity} lastDate={stats.lastDate} />
+          </div>
+          <div class="ch-actions">
+            <a class="btn btn-primary" href={creator.channelUrl} target="_blank" rel="noopener">Voir la chaîne sur YouTube</a>
+            <a class="btn" href={subscribeUrl} target="_blank" rel="noopener">S'abonner</a>
+            <a class="btn" href="#videos">Toutes ses vidéos ↓</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="section section-tight" aria-label="En chiffres">
+    <div class="container">
+      <div class="stats">
+        {
+          tiles.map((t) => (
+            <div class="stat">
+              <span class="stat-value">{t.value}</span>
+              <span class="stat-label">{t.label}</span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="analyse-title">
+    <div class="container analysis">
+      <article>
+        <span class="eyebrow">Notre analyse</span>
+        <h2 id="analyse-title">Pourquoi regarder {data.name}&nbsp;?</h2>
+        <div class="prose"><Content /></div>
+      </article>
+      <aside class="facts card" style={`--h:${domain.data.hue}`}>
+        <h3>Points forts</h3>
+        <ul class="checks">
+          {data.strengths.map((s) => <li>{s}</li>)}
+        </ul>
+        <dl>
+          <dt>Pour qui&nbsp;?</dt>
+          <dd>{data.forWho}</dd>
+          <dt>Format</dt>
+          <dd>{data.format}</dd>
+          <dt>Niveau</dt>
+          <dd>{LEVELS[data.level].short} : {LEVELS[data.level].label.toLowerCase()}</dd>
+        </dl>
+      </aside>
+    </div>
+  </section>
+
+  {
+    creator.starters.length > 0 && (
+      <section class="section" aria-labelledby="start-title">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Première fois&nbsp;?</span>
+              <h2 id="start-title">Par où commencer</h2>
+              <p>
+                {data.startWith.length
+                  ? 'Notre sélection pour découvrir la chaîne.'
+                  : creator.complete
+                    ? 'Les vidéos les plus regardées de la chaîne : un bon point d’entrée.'
+                    : 'Les vidéos récentes les plus regardées : un bon point d’entrée.'}
+              </p>
+            </div>
+          </div>
+          <div class="grid grid-wide">
+            {creator.starters.map((v, i) => (
+              <VideoCard video={v} large eager={i === 0} />
+            ))}
+          </div>
+          {popular.length > 0 && creator.complete && (
+            <>
+              <h3 class="sub-title">Les plus vues ensuite</h3>
+              <div class="grid">
+                {popular.map((v) => (
+                  <VideoCard video={v} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+    )
+  }
+
+  <section class="section" id="videos" aria-labelledby="videos-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Catalogue</span>
+          <h2 id="videos-title">Toutes les vidéos de {data.name}</h2>
+          <p>Recherchez, filtrez par durée ou par année : chaque vidéo s'ouvre sur YouTube.</p>
+        </div>
+      </div>
+      {
+        !creator.complete && (
+          <div class="notice">
+            <span aria-hidden="true">ℹ️</span>
+            <p>
+              Liste partielle : seules les {creator.videos.length} dernières vidéos longues sont affichées pour l'instant
+              {channel?.videoCount ? ` (la chaîne en compte environ ${formatCount(channel.videoCount)}, Shorts compris)` : ''}. Le
+              catalogue complet apparaîtra à la prochaine mise à jour des données.{' '}
+              <a href={creator.channelUrl + '/videos'} target="_blank" rel="noopener">
+                Voir toutes ses vidéos sur YouTube
+              </a>
+              .
+            </p>
+          </div>
+        )
+      }
+      <VideoBrowser id="v" videos={creator.videos} />
+    </div>
+  </section>
+
+  {
+    similar.length > 0 && (
+      <section class="section" aria-labelledby="similar-title">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Dans le même esprit</span>
+              <h2 id="similar-title">Si vous aimez {data.name}, essayez aussi</h2>
+            </div>
+          </div>
+          <div class="grid">
+            {similar.map((c) => (
+              <CreatorCard creator={c} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+</Base>
+
+<style>
+  .creator-hero {
+    padding-block: 28px 36px;
+    background:
+      radial-gradient(90% 120% at 0% 0%, var(--dom-bg) 0%, transparent 70%),
+      var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.88rem;
+    color: var(--ink-2);
+    margin-bottom: 24px;
+  }
+
+  .breadcrumb a {
+    color: var(--ink-2);
+  }
+
+  .ch-grid {
+    display: grid;
+    gap: 24px;
+    align-items: center;
+  }
+
+  @media (min-width: 720px) {
+    .ch-grid {
+      grid-template-columns: auto 1fr;
+      gap: 36px;
+    }
+  }
+
+  .ch-grid :global(.ch-avatar) {
+    width: clamp(96px, 18vw, 140px);
+    height: auto;
+    border: 4px solid var(--surface);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .ch-text h1 {
+    margin-bottom: 4px;
+  }
+
+  .ch-author {
+    color: var(--ink-2);
+    margin-bottom: 12px;
+  }
+
+  .ch-tagline {
+    font-family: var(--font-display);
+    font-size: clamp(1.2rem, 2.6vw, 1.55rem);
+    line-height: 1.35;
+    max-width: 40ch;
+    margin-bottom: 16px;
+  }
+
+  .ch-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .section-tight {
+    padding-block: 28px 44px;
+  }
+
+  .analysis {
+    display: grid;
+    gap: 32px;
+  }
+
+  @media (min-width: 900px) {
+    .analysis {
+      grid-template-columns: 1.6fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .facts {
+    padding: 24px;
+    border-top: 5px solid var(--dom-strong);
+  }
+
+  .facts h3 {
+    margin-bottom: 12px;
+  }
+
+  .checks {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .checks li {
+    position: relative;
+    padding-left: 28px;
+    line-height: 1.45;
+  }
+
+  .checks li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    background: var(--dom-bg);
+    color: var(--dom-ink);
+  }
+
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 4px;
+  }
+
+  dt {
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-2);
+    margin-top: 10px;
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  .sub-title {
+    margin-top: 40px;
+  }
+
+  .notice {
+    margin-bottom: 20px;
+  }
+</style>

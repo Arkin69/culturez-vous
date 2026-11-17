@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+ <title>Videos</title>
+ <entry>
+  <id>yt:video:5cT_0Pc1ZuY</id>
+  <yt:videoId>5cT_0Pc1ZuY</yt:videoId>
+  <title>Le jeu le plus complexe de l&#39;humanité &amp; ses secrets !</title>
+  <published>2026-11-13T17:00:01+00:00</published>
+  <media:group>
+   <media:community>
+    <media:statistics views="584190"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:Snx21UqMF6Y</id>
+  <yt:videoId>Snx21UqMF6Y</yt:videoId>
+  <title>Les monstres marins les plus effrayants !</title>
+  <published>2026-10-30T16:59:52+00:00</published>
+ </entry>
+</feed>

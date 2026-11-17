@@ -1,0 +1,44 @@
+---
+import type { Creator } from '../lib/data';
+import { formatCount, LEVELS } from '../lib/format';
+import ActivityBadge from './ActivityBadge.astro';
+import Avatar from './Avatar.astro';
+
+interface Props {
+  creator: Creator;
+  /** Masque la pastille de domaine (inutile sur la page d'un domaine). */
+  hideDomain?: boolean;
+}
+const { creator, hideDomain = false } = Astro.props;
+const { data, stats, channel, domain } = creator;
+---
+
+<a
+  class="ccard card"
+  href={creator.url}
+  style={`--h:${domain.data.hue}`}
+  data-creator={creator.id}
+  data-domains={data.domains.join(' ')}
+  data-level={data.level}
+  data-activity={stats.activity}
+  data-subscribers={channel?.subscribers ?? 0}
+  data-last={stats.lastDate ?? ''}
+  data-name={data.name}
+>
+  <div class="ccard-head">
+    <Avatar creator={creator} />
+    <div>
+      <h3 class="ccard-name">{data.name}</h3>
+      <p class="ccard-sub">
+        {!hideDomain && <span class="ccard-domain">{domain.data.emoji} {domain.data.short} · </span>}
+        {LEVELS[data.level].short}
+      </p>
+    </div>
+  </div>
+  <p class="ccard-tagline">{data.tagline}</p>
+  <div class="ccard-foot">
+    <ActivityBadge activity={stats.activity} lastDate={stats.lastDate} />
+    {channel?.subscribers ? <span>{formatCount(channel.subscribers)} abonnés</span> : null}
+    {channel?.videoCount ? <span>{formatCount(channel.videoCount)} vidéos</span> : null}
+  </div>
+</a>

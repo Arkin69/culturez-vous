@@ -1,0 +1,149 @@
+---
+import CreatorCard from '../../components/CreatorCard.astro';
+import Base from '../../layouts/Base.astro';
+import { getData } from '../../lib/data';
+import { ACTIVITY, LEVELS } from '../../lib/format';
+
+const { creators, domains } = await getData();
+---
+
+<Base title="Tous les vulgarisateurs" description={`Les ${creators.length} vulgarisateurs YouTube francophones de la sélection, filtrables par domaine, niveau et activité.`} current="vulgarisateurs">
+  <section class="section">
+    <div class="container">
+      <span class="eyebrow">La sélection</span>
+      <h1>Les {creators.length} vulgarisateurs</h1>
+      <p class="lead">Filtrez par domaine, par niveau ou par activité, et trouvez la chaîne qui vous ressemble.</p>
+    </div>
+  </section>
+
+  <section class="section" data-creator-list>
+    <div class="container">
+      <form class="toolbar" role="search" aria-label="Filtrer les vulgarisateurs">
+        <div class="field field-search">
+          <label for="c-q">Rechercher</label>
+          <input id="c-q" class="input" type="search" name="q" placeholder="Un nom, un sujet…" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="c-domaine">Domaine</label>
+          <select id="c-domaine" class="select" name="domaine">
+            <option value="">Tous les domaines</option>
+            {domains.map((d) => <option value={d.id}>{d.data.emoji} {d.data.title}</option>)}
+          </select>
+        </div>
+        <div class="field">
+          <label for="c-niveau">Niveau</label>
+          <select id="c-niveau" class="select" name="niveau">
+            <option value="">Tous les niveaux</option>
+            {Object.entries(LEVELS).map(([id, l]) => <option value={id}>{l.short}</option>)}
+          </select>
+        </div>
+        <div class="field">
+          <label for="c-activite">Activité</label>
+          <select id="c-activite" class="select" name="activite">
+            <option value="">Toutes</option>
+            {Object.entries(ACTIVITY).map(([id, a]) => <option value={id}>{a.label}</option>)}
+          </select>
+        </div>
+        <div class="field">
+          <label for="c-tri">Trier par</label>
+          <select id="c-tri" class="select" name="tri">
+            <option value="domaine">Domaine</option>
+            <option value="abonnes">Abonnés</option>
+            <option value="recent">Publication récente</option>
+            <option value="nom">Nom</option>
+          </select>
+        </div>
+      </form>
+      <p class="result-count" data-count aria-live="polite">{creators.length} vulgarisateurs</p>
+      <div class="grid" data-grid>
+        {
+          creators.map((c) => (
+            <div class="grid-item" data-search={`${c.data.name} ${c.data.author ?? ''} ${c.data.tagline} ${c.domains.map((d) => d.data.title).join(' ')}`}>
+              <CreatorCard creator={c} />
+            </div>
+          ))
+        }
+      </div>
+      <div class="empty" data-empty hidden>
+        <p>Aucun vulgarisateur ne correspond à ces critères.</p>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { normalize } from '../../lib/format';
+
+  const root = document.querySelector<HTMLElement>('[data-creator-list]')!;
+  const form = root.querySelector('form')!;
+  const grid = root.querySelector<HTMLElement>('[data-grid]')!;
+  const count = root.querySelector<HTMLElement>('[data-count]')!;
+  const empty = root.querySelector<HTMLElement>('[data-empty]')!;
+  const items = [...grid.querySelectorAll<HTMLElement>('.grid-item')].map((el, order) => {
+    const card = el.querySelector<HTMLElement>('.ccard')!.dataset;
+    return { el, order, text: normalize(el.dataset.search ?? ''), card };
+  });
+
+  // Pré-remplit depuis l'URL : /vulgarisateurs/?domaine=histoire
+  const params = new URLSearchParams(location.search);
+  for (const name of ['q', 'domaine', 'niveau', 'activite', 'tri']) {
+    const el = form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+    const value = params.get(name);
+    if (el && value) el.value = value;
+  }
+
+  function apply() {
+    const f = new FormData(form);
+    const q = normalize(String(f.get('q') ?? ''));
+    const domaine = String(f.get('domaine') ?? '');
+    const niveau = String(f.get('niveau') ?? '');
+    const activite = String(f.get('activite') ?? '');
+    const tri = String(f.get('tri') ?? 'domaine');
+
+    const sorted = [...items].sort((a, b) => {
+      if (tri === 'abonnes') return Number(b.card.subscribers) - Number(a.card.subscribers);
+      if (tri === 'recent') return (b.card.last ?? '').localeCompare(a.card.last ?? '');
+      if (tri === 'nom') return (a.card.name ?? '').localeCompare(b.card.name ?? '', 'fr');
+      return a.order - b.order;
+    });
+    let visible = 0;
+    for (const it of sorted) {
+      const show =
+        q.split(' ').every((t) => it.text.includes(t)) &&
+        (!domaine || (it.card.domains ?? '').split(' ').includes(domaine)) &&
+        (!niveau || it.card.level === niveau) &&
+        (!activite || it.card.activity === activite);
+      it.el.hidden = !show;
+      if (show) visible++;
+      grid.appendChild(it.el);
+    }
+    count.textContent = `${visible} vulgarisateur${visible > 1 ? 's' : ''}${visible < items.length ? ` sur ${items.length}` : ''}`;
+    empty.hidden = visible > 0;
+
+    const p = new URLSearchParams();
+    for (const [k, v] of f.entries()) if (v && !(k === 'tri' && v === 'domaine')) p.set(k, String(v));
+    const qs = p.toString();
+    history.replaceState(null, '', `${location.pathname}${qs ? `?${qs}` : ''}`);
+  }
+
+  form.addEventListener('input', apply);
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    apply();
+  });
+  apply();
+</script>
+
+<style>
+  .grid-item {
+    display: flex;
+  }
+
+  .grid-item > :global(*) {
+    flex: 1;
+  }
+
+  .grid-item[hidden] {
+    display: none;
+  }
+</style>

@@ -1,0 +1,415 @@
+---
+import '../styles/global.css';
+import { dataFreshness, getData, withBase } from '../lib/data';
+import { formatDate } from '../lib/format';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  /** Lien de navigation à marquer comme actif. */
+  current?: 'accueil' | 'domaines' | 'vulgarisateurs' | 'videos' | 'a-propos';
+}
+
+const {
+  title,
+  description = 'Les meilleurs vulgarisateurs YouTube francophones, analysés et classés par domaine, avec la liste complète de leurs vidéos.',
+  image,
+  current,
+} = Astro.props;
+
+const siteName = 'Culturez-vous';
+const fullTitle = title ? `${title} · ${siteName}` : `${siteName} · Les meilleurs vulgarisateurs francophones`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const { creators, domains } = await getData();
+const freshness = dataFreshness(creators);
+
+const nav = [
+  { id: 'domaines', label: 'Domaines', href: withBase('/domaines/') },
+  { id: 'vulgarisateurs', label: 'Vulgarisateurs', href: withBase('/vulgarisateurs/') },
+  { id: 'videos', label: 'Toutes les vidéos', href: withBase('/videos/') },
+  { id: 'a-propos', label: 'À propos', href: withBase('/a-propos/') },
+] as const;
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+    <meta name="theme-color" content="#fbf8f3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#14120f" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:title" content={title ?? siteName} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    {image && <meta property="og:image" content={image} />}
+    <meta name="twitter:card" content={image ? 'summary' : 'summary'} />
+    <script is:inline>
+      // Thème choisi par la personne (sinon : celui du système). Exécuté avant l'affichage.
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="logo" href={withBase('/')} aria-label="Culturez-vous, accueil">
+          <img src={withBase('/favicon.svg')} alt="" width="32" height="32" />
+          <span>Culturez<span class="logo-dash">‑</span>vous</span>
+        </a>
+        <nav class="nav" aria-label="Navigation principale">
+          <ul>
+            {
+              nav.map((item) => (
+                <li>
+                  <a href={item.href} aria-current={current === item.id ? 'page' : undefined}>
+                    {item.label}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+        <form class="header-search" action={withBase('/videos/')} method="get" role="search">
+          <label class="visually-hidden" for="header-q">Rechercher une vidéo</label>
+          <input id="header-q" class="input" type="search" name="q" placeholder="Rechercher une vidéo…" />
+        </form>
+        <button class="icon-btn theme-toggle" type="button" aria-label="Changer de thème (clair ou sombre)">
+          <svg class="i-sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"
+            ><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"></circle><path
+              d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"></path></svg
+          >
+          <svg class="i-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"
+            ><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"
+            ></path></svg
+          >
+        </button>
+        <details class="menu">
+          <summary class="icon-btn" aria-label="Menu">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"
+              ><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg
+            >
+          </summary>
+          <div class="menu-panel card">
+            <form action={withBase('/videos/')} method="get" role="search">
+              <label class="visually-hidden" for="menu-q">Rechercher une vidéo</label>
+              <input id="menu-q" class="input" type="search" name="q" placeholder="Rechercher une vidéo…" />
+            </form>
+            <ul>
+              {
+                nav.map((item) => (
+                  <li>
+                    <a href={item.href} aria-current={current === item.id ? 'page' : undefined}>
+                      {item.label}
+                    </a>
+                  </li>
+                ))
+              }
+            </ul>
+          </div>
+        </details>
+      </div>
+    </header>
+
+    <main id="contenu">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <p class="footer-logo">Culturez‑vous</p>
+          <p class="muted">
+            Un annuaire indépendant pour donner envie de découvrir les vulgarisateurs francophones. Toutes les vidéos s'ouvrent
+            sur YouTube : vos vues vont directement aux créateurs.
+          </p>
+        </div>
+        <nav aria-label="Domaines" class="footer-domains">
+          <p class="footer-title">Domaines</p>
+          <ul>
+            {
+              domains.map((d) => (
+                <li>
+                  <a href={withBase(`/domaines/${d.id}/`)}>{d.data.title}</a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+        <div>
+          <p class="footer-title">Les données</p>
+          <p class="muted small">
+            {freshness.updatedAt ? `Données YouTube mises à jour le ${formatDate(freshness.updatedAt)}.` : 'Données YouTube en attente.'}
+            {
+              freshness.complete === 0
+                ? " Pour l'instant, seules les vidéos les plus récentes de chaque chaîne sont listées."
+                : freshness.complete < freshness.total &&
+                  ` Catalogue complet pour ${freshness.complete} chaîne${freshness.complete > 1 ? 's' : ''} sur ${freshness.total} ; pour les autres, seules les vidéos les plus récentes sont listées.`
+            }
+          </p>
+          <p class="small"><a href={withBase('/a-propos/')}>Méthode et critères de sélection</a></p>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      const root = document.documentElement;
+      document.querySelector('.theme-toggle')?.addEventListener('click', () => {
+        const dark =
+          root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+        root.dataset.theme = dark ? 'light' : 'dark';
+        try {
+          localStorage.setItem('theme', root.dataset.theme);
+        } catch {}
+      });
+      // Ferme le menu mobile quand on clique ailleurs.
+      const menu = document.querySelector<HTMLDetailsElement>('details.menu');
+      document.addEventListener('click', (e) => {
+        if (menu?.open && !menu.contains(e.target as Node)) menu.open = false;
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: absolute;
+    left: 8px;
+    top: -60px;
+    z-index: 100;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  .skip:focus {
+    top: 8px;
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(1.4) blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 64px;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: auto;
+    color: var(--ink);
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .logo-dash {
+    color: var(--accent);
+  }
+
+  .nav ul,
+  .menu-panel ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav ul {
+    display: flex;
+    gap: 4px;
+  }
+
+  .nav a,
+  .menu-panel a {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 999px;
+    color: var(--ink-2);
+    font-weight: 550;
+    font-size: 0.95rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .nav a:hover,
+  .menu-panel a:hover {
+    color: var(--ink);
+    background: var(--surface-2);
+  }
+
+  .nav a[aria-current='page'],
+  .menu-panel a[aria-current='page'] {
+    color: var(--ink);
+    background: var(--surface-2);
+  }
+
+  .header-search {
+    width: 220px;
+  }
+
+  .header-search .input {
+    min-height: 40px;
+    border-radius: 999px;
+    font-size: 0.92rem;
+  }
+
+  .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: none;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .icon-btn::-webkit-details-marker {
+    display: none;
+  }
+
+  .icon-btn:hover {
+    border-color: var(--ink-3);
+  }
+
+  .i-moon {
+    display: none;
+  }
+
+  :global(:root[data-theme='dark']) .i-sun {
+    display: none;
+  }
+
+  :global(:root[data-theme='dark']) .i-moon {
+    display: block;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light'])) .i-sun {
+      display: none;
+    }
+
+    :global(:root:not([data-theme='light'])) .i-moon {
+      display: block;
+    }
+  }
+
+  .menu {
+    position: relative;
+    display: none;
+  }
+
+  .menu-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: min(320px, calc(100vw - 32px));
+    padding: 12px;
+    display: grid;
+    gap: 8px;
+  }
+
+  @media (max-width: 1080px) {
+    .header-search {
+      display: none;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .nav {
+      display: none;
+    }
+
+    .menu {
+      display: block;
+    }
+  }
+
+  .site-footer {
+    margin-top: 48px;
+    padding-block: 48px;
+    border-top: 1px solid var(--line);
+    background: var(--surface-2);
+  }
+
+  .footer-inner {
+    display: grid;
+    gap: 32px;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 820px) {
+    .footer-inner {
+      grid-template-columns: 1.4fr 1fr 1.2fr;
+    }
+  }
+
+  .footer-logo {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+  }
+
+  .footer-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .footer-domains ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    columns: 2;
+    column-gap: 16px;
+  }
+
+  .footer-domains li {
+    break-inside: avoid;
+    padding-block: 2px;
+  }
+
+  .footer-domains a {
+    color: var(--ink-2);
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+
+  .footer-domains a:hover {
+    color: var(--accent-ink);
+  }
+
+  .small {
+    font-size: 0.9rem;
+  }
+</style>

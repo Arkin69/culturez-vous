@@ -1,0 +1,128 @@
+---
+import Avatar from '../../components/Avatar.astro';
+import Base from '../../layouts/Base.astro';
+import { getData, withBase } from '../../lib/data';
+
+const { domains, creators } = await getData();
+---
+
+<Base title="Domaines" description="Les neuf domaines de la vulgarisation francophone : sciences, maths, vivant, climat, histoire, philosophie, société, arts et tech." current="domaines">
+  <section class="section">
+    <div class="container">
+      <span class="eyebrow">Explorer</span>
+      <h1>Les domaines</h1>
+      <p class="lead">
+        {creators.length} vulgarisateurs répartis dans {domains.length} domaines. Une chaîne peut appartenir à plusieurs domaines :
+        elle apparaît alors dans chacun.
+      </p>
+    </div>
+  </section>
+  <section class="section">
+    <div class="container domain-list">
+      {
+        domains.map((d) => (
+          <article class="drow card" style={`--h:${d.data.hue}`}>
+            <a class="drow-link" href={withBase(`/domaines/${d.id}/`)}>
+              <span class="drow-emoji" aria-hidden="true">
+                {d.data.emoji}
+              </span>
+              <span>
+                <h2>{d.data.title}</h2>
+                <p class="muted">{d.data.tagline}</p>
+              </span>
+            </a>
+            <ul class="drow-creators" aria-label={`Vulgarisateurs : ${d.data.title}`}>
+              {d.creators.map((c) => (
+                <li>
+                  <a href={c.url}>
+                    <Avatar creator={c} size={28} />
+                    {c.data.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</Base>
+
+<style>
+  .domain-list {
+    display: grid;
+    gap: 16px;
+  }
+
+  .drow {
+    display: grid;
+    gap: 16px;
+    padding: 20px 24px;
+    border-left: 6px solid var(--dom-strong);
+  }
+
+  @media (min-width: 900px) {
+    .drow {
+      grid-template-columns: 1fr 1.3fr;
+      align-items: center;
+    }
+  }
+
+  .drow-link {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .drow-link:hover h2 {
+    color: var(--accent-ink);
+  }
+
+  .drow-emoji {
+    font-size: 2.4rem;
+    line-height: 1;
+  }
+
+  .drow h2 {
+    font-size: 1.4rem;
+    margin: 0 0 2px;
+  }
+
+  .drow p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .drow-creators {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .drow-creators a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px 3px 3px;
+    border-radius: 999px;
+    background: var(--dom-bg);
+    color: var(--dom-ink);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .drow-creators a:hover {
+    outline: 1px solid var(--dom-strong);
+  }
+
+  .drow-creators :global(.avatar) {
+    width: 24px;
+    height: 24px;
+  }
+</style>

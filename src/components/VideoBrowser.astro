@@ -1,0 +1,118 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import type { Creator } from '../lib/data';
+import { SORTS, yearsOf } from '../lib/filter';
+import { DURATION_BUCKETS, formatNumber } from '../lib/format';
+import type { Video } from '../lib/stats';
+import { videoCardHtml } from '../scripts/video-card';
+
+interface Props {
+  /** Identifiant unique sur la page (pour les libellés). */
+  id: string;
+  /** Page d'un vulgarisateur : toutes ses vidéos sont intégrées à la page. */
+  videos?: Video[];
+  /** Catalogue global : URL du JSON chargé à la demande, et premières vidéos rendues au build. */
+  src?: string;
+  initial?: (Video & { creator: Creator })[];
+  total?: number;
+  years?: string[];
+  creators?: Creator[];
+  domains?: CollectionEntry<'domains'>[];
+  pageSize?: number;
+}
+
+const { id, videos, src, initial = [], creators, domains, pageSize = 48 } = Astro.props;
+const catalogue = Boolean(src);
+const total = Astro.props.total ?? videos?.length ?? 0;
+const years = Astro.props.years ?? yearsOf(videos ?? []);
+const firstCards = catalogue
+  ? initial.slice(0, pageSize).map((v) => videoCardHtml(v, { creator: v.creator.data.name }))
+  : (videos ?? []).slice(0, pageSize).map((v) => videoCardHtml(v));
+// Lignes compactes [id, titre, date, durée, vues] ; « < » échappé pour ne pas fermer la balise script.
+const inlineJson = videos ? JSON.stringify(videos.map((v) => [v.id, v.t, v.d, v.s, v.v])).replace(/</g, '\\u003c') : null;
+const hasDurations = catalogue || (videos ?? []).some((v) => v.s > 0);
+---
+
+<div class="vbrowser" data-video-browser data-src={src} data-page-size={pageSize} data-sync-url="true">
+  <form class="toolbar" role="search" aria-label="Filtrer les vidéos">
+    <div class="field field-search">
+      <label for={`${id}-q`}>Rechercher dans les titres{catalogue && ' et les noms'}</label>
+      <input id={`${id}-q`} class="input" type="search" name="q" placeholder="Un mot, un sujet…" autocomplete="off" />
+    </div>
+    {
+      domains && (
+        <div class="field">
+          <label for={`${id}-domaine`}>Domaine</label>
+          <select id={`${id}-domaine`} class="select" name="domaine">
+            <option value="">Tous les domaines</option>
+            {domains.map((d) => (
+              <option value={d.id}>{d.data.title}</option>
+            ))}
+          </select>
+        </div>
+      )
+    }
+    {
+      creators && (
+        <div class="field">
+          <label for={`${id}-chaine`}>Vulgarisateur</label>
+          <select id={`${id}-chaine`} class="select" name="chaine">
+            <option value="">Tous</option>
+            {[...creators]
+              .sort((a, b) => a.data.name.localeCompare(b.data.name, 'fr'))
+              .map((c) => (
+                <option value={c.id}>{c.data.name}</option>
+              ))}
+          </select>
+        </div>
+      )
+    }
+    {
+      hasDurations && (
+        <div class="field">
+          <label for={`${id}-duree`}>Durée</label>
+          <select id={`${id}-duree`} class="select" name="duree">
+            <option value="">Toutes les durées</option>
+            {DURATION_BUCKETS.map((b) => (
+              <option value={b.id}>{b.label}</option>
+            ))}
+          </select>
+        </div>
+      )
+    }
+    <div class="field">
+      <label for={`${id}-annee`}>Année</label>
+      <select id={`${id}-annee`} class="select" name="annee">
+        <option value="">Toutes les années</option>
+        {years.map((y) => <option value={y}>{y}</option>)}
+      </select>
+    </div>
+    <div class="field">
+      <label for={`${id}-tri`}>Trier par</label>
+      <select id={`${id}-tri`} class="select" name="tri">
+        {SORTS.map((s) => <option value={s.id}>{s.label}</option>)}
+      </select>
+    </div>
+  </form>
+
+  <p class="result-count" data-count aria-live="polite">
+    {formatNumber(total)} vidéo{total > 1 ? 's' : ''}
+  </p>
+  <div class="grid" data-grid set:html={firstCards.join('')} />
+  <div class="empty" data-empty hidden>
+    <p>Aucune vidéo ne correspond à ces critères.</p>
+    <button class="btn btn-small" type="button" data-reset>Effacer les filtres</button>
+  </div>
+  <div class="load-more">
+    <button class="btn" type="button" data-more hidden={total <= pageSize}>Voir plus</button>
+  </div>
+  <noscript><p class="muted">Activez JavaScript pour rechercher et filtrer toutes les vidéos.</p></noscript>
+  {inlineJson && <script type="application/json" data-videos set:html={inlineJson} />}
+</div>
+
+<script>
+  import '../scripts/video-browser';
+  document.querySelectorAll<HTMLButtonElement>('[data-video-browser] [data-reset]').forEach((btn) => {
+    btn.addEventListener('click', () => btn.closest('[data-video-browser]')?.querySelector('form')?.reset());
+  });
+</script>

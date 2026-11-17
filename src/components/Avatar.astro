@@ -1,0 +1,42 @@
+---
+import type { Creator } from '../lib/data';
+
+interface Props {
+  creator: Creator;
+  size?: number;
+  class?: string;
+  eager?: boolean;
+}
+const { creator, size = 56, class: className = '', eager = false } = Astro.props;
+const initials = creator.data.name
+  .replace(/\(.*\)/, '')
+  .split(/\s+/)
+  .filter((w) => /^[\p{L}\d]/u.test(w))
+  .slice(0, 2)
+  .map((w) => w[0].toUpperCase())
+  .join('');
+---
+
+{
+  creator.avatar ? (
+    <img
+      class:list={['avatar', className]}
+      src={creator.avatar}
+      alt=""
+      width={size}
+      height={size}
+      loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+      referrerpolicy="no-referrer"
+      style={`--h:${creator.domain.data.hue}`}
+    />
+  ) : (
+    <span
+      class:list={['avatar', 'avatar-fallback', className]}
+      style={`--h:${creator.domain.data.hue};width:${size}px;height:${size}px;font-size:${size / 2.6}px`}
+      aria-hidden="true"
+    >
+      {initials}
+    </span>
+  )
+}

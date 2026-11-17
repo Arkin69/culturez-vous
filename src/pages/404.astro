@@ -1,0 +1,15 @@
+---
+import Base from '../layouts/Base.astro';
+import { withBase } from '../lib/data';
+---
+
+<Base title="Page introuvable">
+  <section class="section">
+    <div class="container" style="text-align:center">
+      <p style="font-size:3rem;margin:0" aria-hidden="true">🔭</p>
+      <h1>Page introuvable</h1>
+      <p class="lead" style="margin-inline:auto">Cette page s'est perdue quelque part entre deux galaxies.</p>
+      <p><a class="btn btn-primary" href={withBase('/')}>Retour à l'accueil</a></p>
+    </div>
+  </section>
+</Base>

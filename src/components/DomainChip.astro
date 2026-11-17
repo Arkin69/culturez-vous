@@ -1,0 +1,24 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { withBase } from '../lib/data';
+
+interface Props {
+  domain: CollectionEntry<'domains'>;
+  /** Libellé complet (sinon : libellé court). */
+  full?: boolean;
+  large?: boolean;
+  link?: boolean;
+}
+const { domain, full = false, large = false, link = true } = Astro.props;
+const label = full ? domain.data.title : domain.data.short;
+const Tag = link ? 'a' : 'span';
+---
+
+<Tag
+  class:list={['chip', { 'chip-lg': large }]}
+  style={`--h:${domain.data.hue}`}
+  href={link ? withBase(`/domaines/${domain.id}/`) : undefined}
+>
+  <span aria-hidden="true">{domain.data.emoji}</span>
+  {label}
+</Tag>

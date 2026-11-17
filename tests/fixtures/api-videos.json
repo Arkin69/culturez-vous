@@ -1,0 +1,29 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "id": "HJFk7D5Vufc",
+      "snippet": { "publishedAt": "2026-10-08T15:00:12Z", "title": "L'IA va-t-elle tuer les maths ?", "liveBroadcastContent": "none" },
+      "contentDetails": { "duration": "PT41M10S" },
+      "statistics": { "viewCount": "688781" }
+    },
+    {
+      "id": "shortVideo1",
+      "snippet": { "publishedAt": "2026-10-01T10:00:00Z", "title": "Un short", "liveBroadcastContent": "none" },
+      "contentDetails": { "duration": "PT58S" },
+      "statistics": { "viewCount": "1200" }
+    },
+    {
+      "id": "upcoming123",
+      "snippet": { "publishedAt": "2026-11-20T18:00:00Z", "title": "Première à venir", "liveBroadcastContent": "upcoming" },
+      "contentDetails": { "duration": "P0D" },
+      "statistics": {}
+    },
+    {
+      "id": "longLive999",
+      "snippet": { "publishedAt": "2025-01-02T20:00:00Z", "title": "Rediffusion du live", "liveBroadcastContent": "none" },
+      "contentDetails": { "duration": "PT2H3M4S" },
+      "statistics": { "viewCount": "5000" }
+    }
+  ]
+}

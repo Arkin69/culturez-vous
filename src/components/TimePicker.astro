@@ -1,0 +1,188 @@
+---
+// « Vous avez combien de temps ? » : propose une vidéo au hasard dans la durée choisie.
+import type { Creator } from '../lib/data';
+
+interface Props {
+  creators: Creator[];
+}
+const { creators } = Astro.props;
+
+const BUCKETS = [
+  { id: '10', label: '10 min', hint: '5 à 13 minutes', min: 300, max: 780 },
+  { id: '20', label: '20 min', hint: '14 à 26 minutes', min: 840, max: 1560 },
+  { id: '45', label: '45 min', hint: '35 à 55 minutes', min: 2100, max: 3300 },
+  { id: '60', label: '1 h et plus', hint: "Plus de 55 minutes", min: 3300, max: 4 * 3600 },
+  { id: 'any', label: 'Surprenez-moi', hint: "N'importe quelle durée", min: 300, max: 4 * 3600 },
+];
+const PER_BUCKET = 120;
+
+const all = creators.flatMap((c, i) => c.videos.map((v) => ({ ...v, ci: i })));
+// Pour chaque durée : les vidéos les plus vues, en limitant à 8 par vulgarisateur pour varier.
+const buckets = Object.fromEntries(
+  BUCKETS.map((b) => {
+    const perCreator = new Map<number, number>();
+    const rows = all
+      .filter((v) => v.s >= b.min && v.s < b.max)
+      .sort((a, z) => z.v - a.v)
+      .filter((v) => {
+        const n = perCreator.get(v.ci) ?? 0;
+        perCreator.set(v.ci, n + 1);
+        return n < 8;
+      })
+      .slice(0, PER_BUCKET)
+      .map((v) => [v.id, v.t, v.d, v.s, v.v, v.ci]);
+    return [b.id, rows];
+  }),
+);
+const payload = JSON.stringify({
+  creators: creators.map((c) => [c.data.name, c.url, c.domain.data.hue, c.data.tagline]),
+  buckets,
+}).replace(/</g, '\\u003c');
+const available = BUCKETS.filter((b) => buckets[b.id].length > 0);
+---
+
+<section class="picker card" data-time-picker aria-labelledby="picker-title">
+  <div class="picker-intro">
+    <span class="eyebrow">Une idée de vidéo</span>
+    <h2 id="picker-title">Vous avez combien de temps&nbsp;?</h2>
+    <p class="muted">Choisissez une durée, on vous propose une vidéo d'un vulgarisateur de la sélection.</p>
+    <div class="picker-buttons" role="group" aria-label="Durée disponible">
+      {
+        available.map((b) => (
+          <button class:list={['btn', { 'btn-primary': b.id === 'any' }]} type="button" data-bucket={b.id} aria-pressed="false" title={b.hint}>
+            {b.label}
+          </button>
+        ))
+      }
+    </div>
+  </div>
+  <div class="picker-result" data-result aria-live="polite">
+    <div class="picker-placeholder">
+      <span class="picker-clock" aria-hidden="true">⏱️</span>
+      <p>Votre prochaine découverte apparaîtra ici.</p>
+    </div>
+  </div>
+  <script type="application/json" data-picker set:html={payload} />
+</section>
+
+<script>
+  import { escapeHtml, videoCardHtml } from '../scripts/video-card';
+
+  type Row = [string, string, string, number, number, number];
+  interface Payload {
+    creators: [string, string, number, string][];
+    buckets: Record<string, Row[]>;
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-time-picker]').forEach((root) => {
+    const data = JSON.parse(root.querySelector('[data-picker]')!.textContent!) as Payload;
+    const result = root.querySelector<HTMLElement>('[data-result]')!;
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-bucket]')];
+    let current = '';
+    let lastId = '';
+
+    function pick(bucket: string) {
+      const rows = data.buckets[bucket] ?? [];
+      if (!rows.length) return;
+      let row = rows[Math.floor(Math.random() * rows.length)];
+      if (rows.length > 1) while (row[0] === lastId) row = rows[Math.floor(Math.random() * rows.length)];
+      lastId = row[0];
+      const [id, t, d, s, v, ci] = row;
+      const [name, url, hue, tagline] = data.creators[ci];
+      result.innerHTML =
+        `<div class="picker-pick" style="--h:${hue}">` +
+        videoCardHtml({ id, t, d, s, v }, { large: true, eager: true }) +
+        `<div class="picker-who"><p>Par <a href="${escapeHtml(url)}">${escapeHtml(name)}</a> : ${escapeHtml(tagline)}</p>` +
+        `<button class="btn btn-small" type="button" data-again>Une autre idée</button></div></div>`;
+      result.querySelector<HTMLButtonElement>('[data-again]')!.addEventListener('click', () => pick(current));
+    }
+
+    buttons.forEach((btn) =>
+      btn.addEventListener('click', () => {
+        current = btn.dataset.bucket!;
+        buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+        pick(current);
+      }),
+    );
+  });
+</script>
+
+<style>
+  .picker {
+    display: grid;
+    gap: 24px;
+    padding: clamp(20px, 4vw, 36px);
+    grid-template-columns: 1fr;
+    background:
+      radial-gradient(120% 140% at 0% 0%, var(--accent-soft) 0%, transparent 55%),
+      var(--surface);
+  }
+
+  @media (min-width: 900px) {
+    .picker {
+      grid-template-columns: 1fr 1.1fr;
+      align-items: center;
+    }
+  }
+
+  .picker h2 {
+    margin-bottom: 8px;
+  }
+
+  .picker-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .picker-result {
+    min-height: 200px;
+    display: grid;
+  }
+
+  .picker-placeholder {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 8px;
+    min-height: 220px;
+    border: 2px dashed var(--line);
+    border-radius: var(--radius);
+    color: var(--ink-2);
+    text-align: center;
+    padding: 16px;
+  }
+
+  .picker-placeholder p {
+    margin: 0;
+  }
+
+  .picker-clock {
+    font-size: 2.4rem;
+  }
+
+  .picker-result :global(.picker-pick) {
+    display: grid;
+    gap: 12px;
+  }
+
+  .picker-result :global(.picker-who) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    font-size: 0.92rem;
+    color: var(--ink-2);
+  }
+
+  .picker-result :global(.picker-who p) {
+    margin: 0;
+    flex: 1 1 240px;
+  }
+
+  .picker-result :global(.picker-who a) {
+    font-weight: 700;
+  }
+</style>
